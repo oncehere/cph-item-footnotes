@@ -1,0 +1,10 @@
+Apocalypse Footnotes / CPH item footnotes engine hooks
+SPDX-License-Identifier: CC-BY-SA-3.0
+Attribution: oncehere and CPH/Cataclysm contributors.
+
+Cataclysm is licensed under the Creative Commons Attribution-ShareAlike 3.0 Unported License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/ or send a letter to Creative Commons, 444 Castro Street, Suite 900, Mountain View, California, 94041, USA.
+
+The MOD contributions and these engine patches are distributed under the Creative Commons Attribution-ShareAlike 3.0 Unported License.
+Official license: https://creativecommons.org/licenses/by-sa/3.0/
+Legal code: https://creativecommons.org/licenses/by-sa/3.0/legalcode
+See NOTICE.md for source attribution and the changes made.

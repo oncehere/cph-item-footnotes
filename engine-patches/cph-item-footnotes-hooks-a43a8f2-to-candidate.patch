@@ -1,0 +1,1060 @@
+diff --git a/data/lua/types/ccb_platform_v1.d.lua b/data/lua/types/ccb_platform_v1.d.lua
+index 6f4f06fa215bc713555c5b55d3473aefc0c56e3a..459f4cfd953d8dbc30ed68c38aa008ed29f8751c 100644
+--- a/data/lua/types/ccb_platform_v1.d.lua
++++ b/data/lua/types/ccb_platform_v1.d.lua
+@@ -6065,6 +6065,24 @@ function CcbPlatformContent.edit_forest_biome_mapgen(id) end
+ ---@field cancellable true Returning false prevents death by restoring each vital body part to at least one HP.
+ ---@field results table Aggregate results from earlier handlers; `allowed` is false after a veto.
+ 
++---@class CcbPlatformItemDescriptionAppendHook
++---@field hook 'on_item_description_append'
++---@field item_id string Stable string id of the item being examined.
++---@field variant_id? string Visual variant id, when present.
++---@field language string Current effective language code ('zh_CN', 'en', etc.).
++
++---@class CcbPlatformItemDescriptionAppendResult
++---@field text string Footnote paragraph to append to the item description.
++
++---@class CcbPlatformItemAsciiArtFallbackHook
++---@field hook 'on_item_ascii_art_fallback'
++---@field item_id string Stable string id of the item being examined.
++---@field variant_id? string Visual variant id, when present.
++---@field language string Current effective language code ('zh_CN', 'en', etc.).
++
++---@class CcbPlatformItemAsciiArtFallbackResult
++---@field art_id string Valid registered ascii_art id.
++
+ ---@class CcbPlatformRuntime
+ local CcbPlatformRuntime = {}
+ 
+diff --git a/src/item_info.cpp b/src/item_info.cpp
+index e9c64d0d11242364cc1ac6bb0786ea197093f03b..1c1dd88c87dafa56a3944b553b0303b82402d017 100644
+--- a/src/item_info.cpp
++++ b/src/item_info.cpp
+@@ -81,6 +81,9 @@
+ #include "talker.h"
+ #include "text_snippets.h"
+ #include "translation.h"
++#if defined(LOCALIZE)
++#include "translation_manager.h"
++#endif
+ #include "translations.h"
+ #include "type_id.h"
+ #include "units.h"
+@@ -341,6 +344,23 @@ void item::basic_info( std::vector<iteminfo> &info, const iteminfo_query *parts,
+                 info.emplace_back( "DESCRIPTION", type->description.translated() );
+             }
+         }
++
++        std::string effective_lang = "en";
++#if defined(LOCALIZE)
++        effective_lang = TranslationManager::GetInstance().GetCurrentLanguage();
++        if( effective_lang.empty() ) {
++            effective_lang = "en";
++        }
++#endif
++        const std::optional<std::string> footnote =
++            cata::lua_platform::dispatch_item_description_append(
++                typeId().str(),
++                has_itype_variant() ? std::make_optional( itype_variant().id ) : std::nullopt,
++                effective_lang );
++        if( footnote.has_value() && !footnote->empty() ) {
++            info.emplace_back( "DESCRIPTION", *footnote );
++        }
++
+         insert_separation_line( info );
+     }
+ 
+@@ -4448,6 +4468,23 @@ void item::ascii_art_info( std::vector<iteminfo> &info, const iteminfo_query * /
+     if( has_itype_variant() && itype_variant().art.is_valid() ) {
+         art = itype_variant().art;
+     }
++    if( !art.is_valid() ) {
++        std::string effective_lang = "en";
++#if defined(LOCALIZE)
++        effective_lang = TranslationManager::GetInstance().GetCurrentLanguage();
++        if( effective_lang.empty() ) {
++            effective_lang = "en";
++        }
++#endif
++        const std::optional<std::string> fallback_art_id =
++            cata::lua_platform::dispatch_item_ascii_art_fallback(
++                typeId().str(),
++                has_itype_variant() ? std::make_optional( itype_variant().id ) : std::nullopt,
++                effective_lang );
++        if( fallback_art_id.has_value() ) {
++            art = ascii_art_id( *fallback_art_id );
++        }
++    }
+     if( art.is_valid() ) {
+         insert_separation_line( info );
+         for( const std::string &line : art->picture ) {
+diff --git a/src/lua_platform_disabled.cpp b/src/lua_platform_disabled.cpp
+index 0602a0991db14bd7bef6fc83efd3d9db277b802b..280688aaeb80ec3fa12722e1a9d7c4e523481e31 100644
+--- a/src/lua_platform_disabled.cpp
++++ b/src/lua_platform_disabled.cpp
+@@ -341,4 +341,20 @@ bool dispatch_mapgen_generate( mapgendata & )
+     return false;
+ }
+ 
++std::optional<std::string> dispatch_item_description_append(
++    const std::string &,
++    const std::optional<std::string> &,
++    const std::string & )
++{
++    return std::nullopt;
++}
++
++std::optional<std::string> dispatch_item_ascii_art_fallback(
++    const std::string &,
++    const std::optional<std::string> &,
++    const std::string & )
++{
++    return std::nullopt;
++}
++
+ } // namespace cata::lua_platform
+diff --git a/src/lua_platform_hooks.cpp b/src/lua_platform_hooks.cpp
+index 90f645d4982148dd3925fab8c7bc72aa1d74262c..89197a67876f9a6361273f3a6aa45ea63380c142 100644
+--- a/src/lua_platform_hooks.cpp
++++ b/src/lua_platform_hooks.cpp
+@@ -634,6 +634,14 @@ const std::vector<script_hook_spec> &script_hook_specs()
+         { "on_game_load", script_hook_mode::observe, {} },
+         { "on_game_save", script_hook_mode::observe, {} },
+         { "on_game_started", script_hook_mode::observe, {} },
++        {
++            "on_item_ascii_art_fallback", script_hook_mode::intercept,
++            { "item_id", "variant_id", "language" }, { "art_id" }
++        },
++        {
++            "on_item_description_append", script_hook_mode::intercept,
++            { "item_id", "variant_id", "language" }, { "text" }
++        },
+         {
+             "on_make_mapgen_factory_list", script_hook_mode::intercept,
+             { "candidates" }, { "results" }
+diff --git a/src/lua_platform_hooks.h b/src/lua_platform_hooks.h
+index 5e20aacceed4751c0b754a4f213bde92e77b2403..a7a2398fd0801f77735ddad6f0eabc571c9838cc 100644
+--- a/src/lua_platform_hooks.h
++++ b/src/lua_platform_hooks.h
+@@ -240,6 +240,14 @@ bool allow_native_elevator_use(
+ std::vector<native_menu_entry> collect_native_hook_menu_entries(
+     std::string_view name,
+     const native_callback_arguments &arguments = {} );
++std::optional<std::string> dispatch_item_description_append(
++    const std::string &item_id,
++    const std::optional<std::string> &variant_id = std::nullopt,
++    const std::string &language = "en" );
++std::optional<std::string> dispatch_item_ascii_art_fallback(
++    const std::string &item_id,
++    const std::optional<std::string> &variant_id = std::nullopt,
++    const std::string &language = "en" );
+ 
+ enum class script_hook_mode : int {
+     observe,
+diff --git a/src/lua_platform_runtime_hooks.cpp b/src/lua_platform_runtime_hooks.cpp
+index 1796cc81428619f46fc8441144d540723aa2a805..023c1057caf23073f8fc603661da09c9cc211094 100644
+--- a/src/lua_platform_runtime_hooks.cpp
++++ b/src/lua_platform_runtime_hooks.cpp
+@@ -1,4 +1,5 @@
+ #include "lua_platform_runtime_internal.h"
++#include "ascii_art.h"
+ #include "item_category.h"
+ #include "itype.h"
+ 
+@@ -3486,6 +3487,352 @@ std::optional<emission_profile> invoke_emission_profile_handler(
+     return std::nullopt;
+ }
+ 
++namespace
++{
++
++bool is_valid_utf8_and_clean_controls( const std::string &str, bool allow_newlines )
++{
++    const unsigned char *bytes = reinterpret_cast<const unsigned char *>( str.data() );
++    const std::size_t len = str.size();
++    std::size_t i = 0;
++    while( i < len ) {
++        unsigned char c = bytes[i];
++        if( c < 0x80 ) {
++            if( c == 0x7F ) { // DEL
++                return false;
++            }
++            if( c < 32 ) {
++                if( allow_newlines ) {
++                    if( c == '\n' ) {
++                        ++i;
++                        continue;
++                    }
++                    if( c == '\r' ) {
++                        // CRLF is allowed, lone CR is forbidden
++                        if( i + 1 < len && bytes[i + 1] == '\n' ) {
++                            i += 2;
++                            continue;
++                        }
++                        return false;
++                    }
++                }
++                return false;
++            }
++            ++i;
++        } else if( ( c & 0xE0 ) == 0xC0 ) {
++            // 2-byte sequence: 0xC2..0xDF
++            if( c < 0xC2 || i + 1 >= len ) {
++                return false;
++            }
++            unsigned char c1 = bytes[i + 1];
++            if( ( c1 & 0xC0 ) != 0x80 ) {
++                return false;
++            }
++            // Reject C1 control characters (U+0080..U+009F -> 0xC2 0x80..0xC2 0x9F)
++            if( c == 0xC2 && c1 <= 0x9F ) {
++                return false;
++            }
++            i += 2;
++        } else if( ( c & 0xF0 ) == 0xE0 ) {
++            // 3-byte sequence: 0xE0..0xEF
++            if( i + 2 >= len ) {
++                return false;
++            }
++            unsigned char c1 = bytes[i + 1];
++            unsigned char c2 = bytes[i + 2];
++            if( ( c1 & 0xC0 ) != 0x80 || ( c2 & 0xC0 ) != 0x80 ) {
++                return false;
++            }
++            if( c == 0xE0 && c1 < 0xA0 ) { // overlong
++                return false;
++            }
++            if( c == 0xED && c1 >= 0xA0 ) { // surrogate U+D800..U+DFFF
++                return false;
++            }
++            i += 3;
++        } else if( ( c & 0xF8 ) == 0xF0 ) {
++            // 4-byte sequence: 0xF0..0xF4
++            if( i + 3 >= len ) {
++                return false;
++            }
++            unsigned char c1 = bytes[i + 1];
++            unsigned char c2 = bytes[i + 2];
++            unsigned char c3 = bytes[i + 3];
++            if( ( c1 & 0xC0 ) != 0x80 || ( c2 & 0xC0 ) != 0x80 || ( c3 & 0xC0 ) != 0x80 ) {
++                return false;
++            }
++            if( c == 0xF0 && c1 < 0x90 ) { // overlong
++                return false;
++            }
++            if( c == 0xF4 && c1 > 0x8F ) { // out of range > U+10FFFF
++                return false;
++            }
++            if( c > 0xF4 ) {
++                return false;
++            }
++            i += 4;
++        } else {
++            return false;
++        }
++    }
++    return true;
++}
++
++} // namespace
++
++std::optional<std::string> dispatch_item_description_append(
++    const std::string &item_id,
++    const std::optional<std::string> &variant_id,
++    const std::string &language )
++{
++    static constexpr std::string_view hook_name = "on_item_description_append";
++    std::string aggregate_text;
++    static constexpr std::size_t max_single_entry = 4096;
++    static constexpr std::size_t max_aggregate_total = 32768;
++
++    for( const std::shared_ptr<runtime> &owner : detail::active_runtime_values() ) {
++        if( !owner || !owner->world_is_ready ) {
++            continue;
++        }
++        const auto subscription = owner->hooks.find( std::string( hook_name ) );
++        if( subscription == owner->hooks.end() ) {
++            continue;
++        }
++        const std::vector<std::string> handlers = subscription->second;
++        for( const std::string &handler_id : handlers ) {
++            const auto handler = owner->handlers.find( handler_id );
++            if( handler == owner->handlers.end() ) {
++                continue;
++            }
++            if( owner->callback_depth >= 16 ) {
++                DebugLog( D_ERROR, D_MAIN ) << "Lua-first native hook recursion limit reached for '"
++                                            << owner->mod_id << ':' << hook_name << "'";
++                continue;
++            }
++
++            sol::table payload = owner->lua->create_table();
++            payload["hook"] = std::string( hook_name );
++            payload["item_id"] = item_id;
++            if( variant_id.has_value() ) {
++                payload["variant_id"] = *variant_id;
++            } else {
++                payload["variant_id"] = sol::lua_nil;
++            }
++            payload["language"] = language;
++
++            sol::protected_function callback = handler->second.callback;
++            callback_scope scope( *owner );
++            const sol::protected_function_result result = callback( payload );
++            if( !result.valid() ) {
++                report_callback_error( *owner, handler_id, result,
++                                       "hook " + std::string( hook_name ) );
++                continue;
++            }
++
++            if( result.return_count() == 0 ) {
++                continue;
++            }
++            sol::object returned = result.get<sol::object>();
++            if( returned.get_type() == sol::type::nil ) {
++                continue;
++            }
++            if( returned.get_type() != sol::type::table ) {
++                DebugLog( D_ERROR, D_MAIN ) << "on_item_description_append from '"
++                                            << owner->mod_id << ':' << handler_id
++                                            << "' must return a table or nil, got "
++                                            << static_cast<int>( returned.get_type() );
++                continue;
++            }
++
++            sol::table ret_table = returned.as<sol::table>();
++            bool has_invalid_key = false;
++            for( const auto &pair : ret_table ) {
++                if( pair.first.get_type() == sol::type::string ) {
++                    std::string key_str = pair.first.as<std::string>();
++                    if( key_str != "text" ) {
++                        has_invalid_key = true;
++                        break;
++                    }
++                } else {
++                    has_invalid_key = true;
++                    break;
++                }
++            }
++            if( has_invalid_key ) {
++                DebugLog( D_ERROR, D_MAIN ) << "on_item_description_append from '"
++                                            << owner->mod_id << ':' << handler_id
++                                            << "' returned table with unrecognized fields; only 'text' is permitted";
++                continue;
++            }
++
++            sol::object text_obj = ret_table.raw_get<sol::object>( "text" );
++            if( !text_obj.valid() || text_obj.get_type() != sol::type::string ) {
++                DebugLog( D_ERROR, D_MAIN ) << "on_item_description_append from '"
++                                            << owner->mod_id << ':' << handler_id
++                                            << "' 'text' field must be a string";
++                continue;
++            }
++
++            std::string text_val = text_obj.as<std::string>();
++            if( text_val.empty() ) {
++                continue;
++            }
++            if( text_val.size() > max_single_entry ) {
++                DebugLog( D_ERROR, D_MAIN ) << "on_item_description_append from '"
++                                            << owner->mod_id << ':' << handler_id
++                                            << "' single entry text exceeds 4096 bytes";
++                continue;
++            }
++
++            if( !is_valid_utf8_and_clean_controls( text_val, true ) ) {
++                DebugLog( D_ERROR, D_MAIN ) << "on_item_description_append from '"
++                                            << owner->mod_id << ':' << handler_id
++                                            << "' text contains invalid UTF-8 or forbidden control characters";
++                continue;
++            }
++
++            std::string normalized;
++            normalized.reserve( text_val.size() );
++            for( std::size_t i = 0; i < text_val.size(); ++i ) {
++                if( text_val[i] == '\r' && i + 1 < text_val.size() && text_val[i + 1] == '\n' ) {
++                    continue;
++                }
++                normalized.push_back( text_val[i] );
++            }
++
++            std::size_t additional_size = normalized.size() + ( aggregate_text.empty() ? 0 : 1 );
++            if( aggregate_text.size() + additional_size > max_aggregate_total ) {
++                DebugLog( D_ERROR, D_MAIN ) << "on_item_description_append aggregate text exceeds 32768 bytes; candidate dropped";
++                continue;
++            }
++
++            if( !aggregate_text.empty() ) {
++                aggregate_text.push_back( '\n' );
++            }
++            aggregate_text += normalized;
++        }
++    }
++
++    return aggregate_text.empty() ? std::nullopt : std::make_optional( aggregate_text );
++}
++
++std::optional<std::string> dispatch_item_ascii_art_fallback(
++    const std::string &item_id,
++    const std::optional<std::string> &variant_id,
++    const std::string &language )
++{
++    static constexpr std::string_view hook_name = "on_item_ascii_art_fallback";
++
++    for( const std::shared_ptr<runtime> &owner : detail::active_runtime_values() ) {
++        if( !owner || !owner->world_is_ready ) {
++            continue;
++        }
++        const auto subscription = owner->hooks.find( std::string( hook_name ) );
++        if( subscription == owner->hooks.end() ) {
++            continue;
++        }
++        const std::vector<std::string> handlers = subscription->second;
++        for( const std::string &handler_id : handlers ) {
++            const auto handler = owner->handlers.find( handler_id );
++            if( handler == owner->handlers.end() ) {
++                continue;
++            }
++            if( owner->callback_depth >= 16 ) {
++                DebugLog( D_ERROR, D_MAIN ) << "Lua-first native hook recursion limit reached for '"
++                                            << owner->mod_id << ':' << hook_name << "'";
++                continue;
++            }
++
++            sol::table payload = owner->lua->create_table();
++            payload["hook"] = std::string( hook_name );
++            payload["item_id"] = item_id;
++            if( variant_id.has_value() ) {
++                payload["variant_id"] = *variant_id;
++            } else {
++                payload["variant_id"] = sol::lua_nil;
++            }
++            payload["language"] = language;
++
++            sol::protected_function callback = handler->second.callback;
++            callback_scope scope( *owner );
++            const sol::protected_function_result result = callback( payload );
++            if( !result.valid() ) {
++                report_callback_error( *owner, handler_id, result,
++                                       "hook " + std::string( hook_name ) );
++                continue;
++            }
++
++            if( result.return_count() == 0 ) {
++                continue;
++            }
++            sol::object returned = result.get<sol::object>();
++            if( returned.get_type() == sol::type::nil ) {
++                continue;
++            }
++            if( returned.get_type() != sol::type::table ) {
++                DebugLog( D_ERROR, D_MAIN ) << "on_item_ascii_art_fallback from '"
++                                            << owner->mod_id << ':' << handler_id
++                                            << "' must return a table or nil";
++                continue;
++            }
++
++            sol::table ret_table = returned.as<sol::table>();
++            bool has_invalid_key = false;
++            for( const auto &pair : ret_table ) {
++                if( pair.first.get_type() == sol::type::string ) {
++                    std::string key_str = pair.first.as<std::string>();
++                    if( key_str != "art_id" ) {
++                        has_invalid_key = true;
++                        break;
++                    }
++                } else {
++                    has_invalid_key = true;
++                    break;
++                }
++            }
++            if( has_invalid_key ) {
++                DebugLog( D_ERROR, D_MAIN ) << "on_item_ascii_art_fallback from '"
++                                            << owner->mod_id << ':' << handler_id
++                                            << "' returned table with unrecognized fields; only 'art_id' is permitted";
++                continue;
++            }
++
++            sol::object art_obj = ret_table.raw_get<sol::object>( "art_id" );
++            if( !art_obj.valid() || art_obj.get_type() != sol::type::string ) {
++                DebugLog( D_ERROR, D_MAIN ) << "on_item_ascii_art_fallback from '"
++                                            << owner->mod_id << ':' << handler_id
++                                            << "' 'art_id' field must be a string";
++                continue;
++            }
++
++            std::string art_id_val = art_obj.as<std::string>();
++            if( art_id_val.empty() || art_id_val.size() > 512 ) {
++                DebugLog( D_ERROR, D_MAIN ) << "on_item_ascii_art_fallback from '"
++                                            << owner->mod_id << ':' << handler_id
++                                            << "' 'art_id' length invalid";
++                continue;
++            }
++
++            if( !is_valid_utf8_and_clean_controls( art_id_val, false ) ) {
++                DebugLog( D_ERROR, D_MAIN ) << "on_item_ascii_art_fallback from '"
++                                            << owner->mod_id << ':' << handler_id
++                                            << "' 'art_id' contains invalid UTF-8 or forbidden control characters";
++                continue;
++            }
++
++            const ascii_art_id candidate( art_id_val );
++            if( candidate.is_valid() ) {
++                return art_id_val;
++            } else {
++                DebugLog( D_ERROR, D_MAIN ) << "on_item_ascii_art_fallback candidate '"
++                                            << art_id_val << "' is not a valid registered ascii_art_id";
++                continue;
++            }
++        }
++    }
++
++    return std::nullopt;
++}
+ 
+ } // namespace cata::lua_platform
+ 
+diff --git a/tests/lua_platform_test_01_contract.cpp b/tests/lua_platform_test_01_contract.cpp
+index 882fa95b156a8246dad42f622ca71f7a2fdc41a2..c3a2bde561582a527a6b0648ab6af660b2de8ed4 100644
+--- a/tests/lua_platform_test_01_contract.cpp
++++ b/tests/lua_platform_test_01_contract.cpp
+@@ -57,6 +57,7 @@ extern "C" {
+ #include <vector>
+ 
+ #include "activity_actor_definitions.h"
++#include "ascii_art.h"
+ #include "avatar.h"
+ #include "basecamp.h"
+ #include "bodypart.h"
+@@ -74,6 +75,7 @@ extern "C" {
+ #include "game.h"
+ #include "inventory.h"
+ #include "item.h"
++#include "iteminfo_query.h"
+ #include "item_category.h"
+ #include "json.h"
+ #include "json_loader.h"
+@@ -96,6 +98,7 @@ extern "C" {
+ #include "lua_platform_overmap.h"
+ #include "lua_platform_runtime.h"
+ #include "lua_platform_sol.h"
++#include "lua_platform_test_support.h"
+ #include "lua_platform_trade.h"
+ #include "lua_platform_vehicles.h"
+ #include "lua_platform_weather.h"
+@@ -121,6 +124,7 @@ extern "C" {
+ #include "talker_monster.h"
+ #include "talker_npc.h"
+ #include "talker_topic.h"
++#include "translation_manager.h"
+ #include "veh_type.h"
+ #include "vehicle.h"
+ 
+@@ -132,31 +136,6 @@ class runtime;
+ namespace
+ {
+ 
+-static const vproto_id vehicle_prototype_test_shopping_cart( "test_shopping_cart" );
+-
+-struct registrar_graph_entry {
+-    std::string id;
+-    std::string copy_from;
+-};
+-
+-template<typename Type, typename = void>
+-struct has_legacy_dialogue_quote_trade_item : std::false_type {
+-};
+-
+-template<typename Type>
+-struct has_legacy_dialogue_quote_trade_item<Type, std::void_t<
+-decltype( &Type::quote_trade_item )>> : std::true_type {
+-};
+-
+-template<typename Type, typename = void>
+-struct has_legacy_dialogue_buy_quoted_item : std::false_type {
+-};
+-
+-template<typename Type>
+-struct has_legacy_dialogue_buy_quoted_item<Type, std::void_t<
+-decltype( &Type::buy_quoted_item )>> : std::true_type {
+-};
+-
+ } // namespace
+ 
+ TEST_CASE( "lua_platform_exposes_one_runtime_contract", "[lua][platform]" )
+@@ -254,3 +233,474 @@ TEST_CASE( "lua_platform_registrar_applies_typed_extend_delete_atomically",
+     "test flags", error ) );
+     CHECK( error.find( "conflicts" ) != std::string::npos );
+ }
++
++#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
++TEST_CASE( "lua_platform_item_description_append_hook_contract", "[lua][platform][hooks]" )
++{
++    cata::lua_platform::clear_active_runtimes();
++    sol::state lua;
++    sol::table ccb = lua.create_table();
++    const std::shared_ptr<cata::lua_platform::runtime> runtime =
++        cata::lua_platform::make_runtime( "test_footnotes_mod", 1, lua );
++    on_out_of_scope cleanup( []() {
++        cata::lua_platform::clear_active_runtimes();
++        debug_reset_error_observed();
++    } );
++    cata::lua_platform::install_runtime_api( runtime, lua, ccb );
++    lua["ccb"] = ccb;
++    cata::lua_platform::set_active_runtimes( { runtime } );
++    cata::lua_platform::runtime_world_ready( true );
++
++    // 1. No handlers -> returns nullopt
++    CHECK_FALSE( cata::lua_platform::dispatch_item_description_append( "rock", std::nullopt, "en" ).has_value() );
++
++    // 2. Register valid handler returning text
++    lua.script( R"(
++        ccb.runtime.handler("footnote_h1", function(payload)
++            if payload.item_id == "rock" then
++                return { text = "First footnote." }
++            end
++            return nil
++        end)
++        ccb.runtime.hook("on_item_description_append", "footnote_h1")
++    )" );
++
++    std::optional<std::string> res1 = cata::lua_platform::dispatch_item_description_append( "rock", std::nullopt, "en" );
++    REQUIRE( res1.has_value() );
++    CHECK( *res1 == "First footnote." );
++
++    // 3. Register second handler -> aggregate text with \n
++    lua.script( R"(
++        ccb.runtime.handler("footnote_h2", function(payload)
++            return { text = "Second footnote." }
++        end)
++        ccb.runtime.hook("on_item_description_append", "footnote_h2")
++    )" );
++
++    std::optional<std::string> res2 = cata::lua_platform::dispatch_item_description_append( "rock", std::nullopt, "en" );
++    REQUIRE( res2.has_value() );
++    CHECK( *res2 == "First footnote.\nSecond footnote." );
++
++    // 4. Register invalid handler (extra fields like results) -> rejected, others preserved
++    lua.script( R"(
++        ccb.runtime.handler("footnote_bad", function(payload)
++            return { text = "Bad footnote", results = {} }
++        end)
++        ccb.runtime.hook("on_item_description_append", "footnote_bad")
++    )" );
++
++    std::optional<std::string> res3 = cata::lua_platform::dispatch_item_description_append( "rock", std::nullopt, "en" );
++    REQUIRE( res3.has_value() );
++    CHECK( *res3 == "First footnote.\nSecond footnote." );
++    CHECK( debug_has_error_been_observed() );
++    debug_reset_error_observed();
++
++    // 5. Register handler returning forbidden ASCII control characters (e.g. \x1b or \x07) -> rejected, others preserved
++    lua.script( R"(
++        ccb.runtime.handler("footnote_ctrl_chars", function(payload)
++            return { text = "Corrupt\x1b[31mtext\x07." }
++        end)
++        ccb.runtime.hook("on_item_description_append", "footnote_ctrl_chars")
++    )" );
++
++    std::optional<std::string> res4 = cata::lua_platform::dispatch_item_description_append( "rock", std::nullopt, "en" );
++    REQUIRE( res4.has_value() );
++    CHECK( *res4 == "First footnote.\nSecond footnote." );
++    CHECK( debug_has_error_been_observed() );
++    debug_reset_error_observed();
++
++    // 5b. Each C1 value is tested without DEL, which would mask a C1 regression.
++    lua.script( R"(
++        ccb.runtime.handler("footnote_c1_ctrl_chars", function(payload)
++            return { text = footnote_control_text }
++        end)
++        ccb.runtime.hook("on_item_description_append", "footnote_c1_ctrl_chars")
++    )" );
++
++    for( const std::string &control : { std::string( "\xC2\x80" ),
++                                       std::string( "\xC2\x9B" ),
++                                       std::string( "\xC2\x9F" ),
++                                       std::string( "\x7F" ) } ) {
++        lua["footnote_control_text"] = "Corrupt" + control + "text.";
++        std::optional<std::string> res4b = cata::lua_platform::dispatch_item_description_append(
++                                             "rock", std::nullopt, "en" );
++        REQUIRE( res4b.has_value() );
++        CHECK( *res4b == "First footnote.\nSecond footnote." );
++        CHECK( debug_has_error_been_observed() );
++        debug_reset_error_observed();
++    }
++
++    // 6. Test handler snapshot / reentrancy safety: modifying hook list inside handler does not crash or invalidate iterator
++    lua.script( R"(
++        ccb.runtime.handler("footnote_reentrant", function(payload)
++            ccb.runtime.handler("footnote_dynamic", function(p)
++                return { text = "Dynamic footnote." }
++            end)
++            ccb.runtime.hook("on_item_description_append", "footnote_dynamic")
++            return { text = "Reentrant footnote." }
++        end)
++        ccb.runtime.hook("on_item_description_append", "footnote_reentrant")
++    )" );
++
++    std::optional<std::string> res5 = cata::lua_platform::dispatch_item_description_append( "rock", std::nullopt, "en" );
++    REQUIRE( res5.has_value() );
++    CHECK( *res5 == "First footnote.\nSecond footnote.\nReentrant footnote." );
++
++    // Subsequent dispatch executes snapshot containing the newly added dynamic handler
++    std::optional<std::string> res6 = cata::lua_platform::dispatch_item_description_append( "rock", std::nullopt, "en" );
++    REQUIRE( res6.has_value() );
++    CHECK( res6->find( "Dynamic footnote." ) != std::string::npos );
++}
++
++TEST_CASE( "lua_platform_item_ascii_art_fallback_hook_contract", "[lua][platform][hooks]" )
++{
++    cata::lua_platform::clear_active_runtimes();
++    sol::state lua;
++    sol::table ccb = lua.create_table();
++    const std::shared_ptr<cata::lua_platform::runtime> runtime =
++        cata::lua_platform::make_runtime( "test_art_mod", 1, lua );
++    on_out_of_scope cleanup( []() {
++        cata::lua_platform::clear_active_runtimes();
++        debug_reset_error_observed();
++    } );
++    cata::lua_platform::install_runtime_api( runtime, lua, ccb );
++    lua["ccb"] = ccb;
++    cata::lua_platform::set_active_runtimes( { runtime } );
++    cata::lua_platform::runtime_world_ready( true );
++
++    // Load mock ascii art
++    JsonObject jo = json_loader::from_string(
++        R"({"id": "test_mock_art_id", "picture": ["-*-"]})" ).get_object();
++    ascii_art::load_ascii_art( jo, "test" );
++    REQUIRE( ascii_art_id( "test_mock_art_id" ).is_valid() );
++
++    // 1. No handlers -> returns nullopt
++    CHECK_FALSE( cata::lua_platform::dispatch_item_ascii_art_fallback( "rock", std::nullopt, "en" ).has_value() );
++
++    // 2. Invalid candidate first, valid candidate second -> first valid wins
++    lua.script( R"(
++        ccb.runtime.handler("art_h1", function(payload)
++            return { art_id = "nonexistent_art_id_xyz" }
++        end)
++        ccb.runtime.handler("art_h2", function(payload)
++            return { art_id = "test_mock_art_id" }
++        end)
++        ccb.runtime.handler("art_h3", function(payload)
++            return { art_id = "test_mock_art_id_unreached" }
++        end)
++        ccb.runtime.hook("on_item_ascii_art_fallback", "art_h1")
++        ccb.runtime.hook("on_item_ascii_art_fallback", "art_h2")
++        ccb.runtime.hook("on_item_ascii_art_fallback", "art_h3")
++    )" );
++
++    std::optional<std::string> art_res = cata::lua_platform::dispatch_item_ascii_art_fallback( "rock", std::nullopt, "en" );
++    REQUIRE( art_res.has_value() );
++    CHECK( *art_res == "test_mock_art_id" );
++    CHECK( debug_has_error_been_observed() );
++    debug_reset_error_observed();
++}
++
++TEST_CASE( "lua_platform_item_info_description_integration", "[lua][platform][hooks]" )
++{
++    cata::lua_platform::clear_active_runtimes();
++    sol::state lua;
++    lua.open_libraries( sol::lib::base, sol::lib::string, sol::lib::table );
++    sol::table ccb = lua.create_table();
++    const std::shared_ptr<cata::lua_platform::runtime> runtime =
++        cata::lua_platform::make_runtime( "test_footnotes_mod", 1, lua );
++    on_out_of_scope cleanup( []() {
++        cata::lua_platform::clear_active_runtimes();
++        debug_reset_error_observed();
++    } );
++    cata::lua_platform::install_runtime_api( runtime, lua, ccb );
++    lua["ccb"] = ccb;
++    cata::lua_platform::set_active_runtimes( { runtime } );
++    cata::lua_platform::runtime_world_ready( true );
++
++    lua.script( R"(
++        ccb.runtime.handler("fn_mock", function(payload)
++            if payload.item_id == "rock" then
++                return { text = "Millions of years of tectonic pressure." }
++            end
++            return nil
++        end)
++        ccb.runtime.hook("on_item_description_append", "fn_mock")
++    )" );
++
++    item test_rock( itype_id( "rock" ) );
++    std::vector<iteminfo> info;
++    test_rock.basic_info( info, &iteminfo_query::all, 1, false );
++
++    bool found_desc = false;
++    for( const iteminfo &ii : info ) {
++        if( ii.sName.find( "Millions of years of tectonic pressure." ) != std::string::npos ||
++            ii.sFmt.find( "Millions of years of tectonic pressure." ) != std::string::npos ) {
++            found_desc = true;
++            break;
++        }
++    }
++    CHECK( found_desc );
++}
++
++TEST_CASE( "lua_platform_cph_item_footnotes_mod_integration", "[lua][platform][hooks]" )
++{
++    platform_lua_test_directory mod_dir;
++
++    // 1. Write mod definition and Lua files to isolated temp directory
++    mod_dir.write( std::filesystem::u8path( "mod.lua" ), R"lua(
++        local ccb = require("ccb")
++        return ccb.ModDefinition {
++            id = "cph_item_footnotes",
++            name = "末日脚注 / Apocalypse Footnotes",
++            version = "0.1.0",
++            description = "Append humorous footnotes and cold trivia to item descriptions.",
++            dependencies = { "ccb" },
++        }
++    )lua" );
++
++    mod_dir.write( std::filesystem::u8path( "data/footnotes_data.lua" ), R"lua(
++        return {
++            items = {
++                ["rock"] = {
++                    zh = "文明倒退后，它又成了高科技。",
++                    en = "Civilization collapsed and this became cutting-edge technology.",
++                },
++            },
++            variants = {},
++        }
++    )lua" );
++
++    mod_dir.write( std::filesystem::u8path( "data/art_data.lua" ), R"lua(
++        return {
++            items = {
++                ["rock"] = "cph_art_test_rock",
++            },
++            variants = {},
++        }
++    )lua" );
++
++    mod_dir.write( std::filesystem::u8path( "main.lua" ), R"lua(
++        local ccb = rawget(_G, "ccb") or (package and package.loaded and package.loaded["ccb"]) or require("ccb")
++        if not ccb or not ccb.runtime or not ccb.runtime.hook or not ccb.runtime.handler then
++            error("ccb.runtime missing")
++        end
++
++        local footnotes = require("data.footnotes_data")
++        local art_ok, art_data = pcall(require, "data.art_data")
++        if not art_ok or type(art_data) ~= "table" then
++            art_data = { items = {}, variants = {} }
++        end
++
++        local function normalize_lang(lang)
++            if not lang or lang == "" then return "en" end
++            local l = string.lower(string.gsub(lang, "-", "_"))
++            if string.sub(l, 1, 2) == "zh" then return "zh" end
++            return "en"
++        end
++
++        local function on_description_append(payload)
++            if not payload or not payload.item_id then return nil end
++            local effective_lang = normalize_lang(payload.language)
++            local item_entry = footnotes.items and footnotes.items[payload.item_id]
++            if item_entry then
++                local text = item_entry[effective_lang] or item_entry["en"] or item_entry["zh"]
++                if text and text ~= "" then
++                    return { text = text }
++                end
++            end
++            return nil
++        end
++
++        local function on_ascii_art_fallback(payload)
++            if not payload or not payload.item_id then return nil end
++            local art_id = art_data.items and art_data.items[payload.item_id]
++            if art_id and art_id ~= "" then
++                return { art_id = art_id }
++            end
++            return nil
++        end
++
++        ccb.runtime.handler("cph_fn_desc", on_description_append, 1)
++        ccb.runtime.handler("cph_fn_art", on_ascii_art_fallback, 1)
++        ccb.runtime.hook("on_item_description_append", "cph_fn_desc")
++        ccb.runtime.hook("on_item_ascii_art_fallback", "cph_fn_art")
++    )lua" );
++
++    // Register fallback test ascii art
++    JsonObject jo = json_loader::from_string(
++        R"({"id": "cph_art_test_rock", "picture": [" .--. ", "|rock|", " '---' "]})" ).get_object();
++    ascii_art::load_ascii_art( jo, "test" );
++    REQUIRE( ascii_art_id( "cph_art_test_rock" ).is_valid() );
++
++    // Register a native item art to test native art priority over fallback
++    JsonObject jo_native = json_loader::from_string(
++        R"({"id": "test_native_art_ammo", "picture": ["|ammo|"]})" ).get_object();
++    ascii_art::load_ascii_art( jo_native, "test" );
++    REQUIRE( ascii_art_id( "test_native_art_ammo" ).is_valid() );
++
++    // A. Test mod discovery & dependencies
++    cata::lua_platform::mod_definition metadata;
++    std::string loader_error;
++    REQUIRE( cata::lua_platform::read_mod_definition( mod_dir.root, metadata, loader_error ) );
++    CHECK( loader_error.empty() );
++    CHECK( metadata.id == "cph_item_footnotes" );
++    CHECK( metadata.name == "末日脚注 / Apocalypse Footnotes" );
++    CHECK( metadata.version == "0.1.0" );
++    REQUIRE( metadata.dependencies.size() == 1 );
++    CHECK( metadata.dependencies[0] == "ccb" );
++
++    // B. Test mod loading and execution using Platform loader API
++    cata::lua_platform::clear_active_runtimes();
++    on_out_of_scope cleanup( []() {
++        cata::lua_platform::clear_active_runtimes();
++        cata::lua_platform::shutdown();
++        debug_reset_error_observed();
++    } );
++
++    const cata::lua_platform::mod_source source = {
++        metadata.id, mod_dir.root, mod_dir.root / std::filesystem::u8path( metadata.entry )
++    };
++    REQUIRE( cata::lua_platform::prepare_mods( { source }, loader_error ) );
++    CHECK( loader_error.empty() );
++    REQUIRE( cata::lua_platform::apply_prepared_content( loader_error ) );
++    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( loader_error ) );
++    cata::lua_platform::commit_prepared_mods();
++    cata::lua_platform::runtime_world_ready( true );
++
++    // C. Test language switching: English vs Chinese
++    std::optional<std::string> desc_en =
++        cata::lua_platform::dispatch_item_description_append( "rock", std::nullopt, "en" );
++    REQUIRE( desc_en.has_value() );
++    CHECK( desc_en->find( "Civilization collapsed and this became cutting-edge technology." ) != std::string::npos );
++
++    std::optional<std::string> desc_zh =
++        cata::lua_platform::dispatch_item_description_append( "rock", std::nullopt, "zh_CN" );
++    REQUIRE( desc_zh.has_value() );
++    CHECK( desc_zh->find( "文明倒退后，它又成了高科技。" ) != std::string::npos );
++
++    // D. Test item basic_info bilingual switching integration
++#if defined(LOCALIZE)
++    const std::string original_lang = TranslationManager::GetInstance().GetCurrentLanguage();
++    on_out_of_scope restore_lang( [original_lang]() {
++        TranslationManager::GetInstance().SetLanguage( original_lang );
++    } );
++
++    // D1. English language check via basic_info
++    TranslationManager::GetInstance().SetLanguage( "en" );
++    item test_rock( itype_id( "rock" ) );
++    std::vector<iteminfo> info_en;
++    test_rock.basic_info( info_en, &iteminfo_query::all, 1, false );
++    bool found_desc_en = false;
++    for( const iteminfo &ii : info_en ) {
++        if( ii.sName.find( "Civilization collapsed" ) != std::string::npos ||
++            ii.sFmt.find( "Civilization collapsed" ) != std::string::npos ) {
++            found_desc_en = true;
++            break;
++        }
++    }
++    CHECK( found_desc_en );
++
++    // D2. Chinese language switch check via basic_info
++    TranslationManager::GetInstance().SetLanguage( "zh_CN" );
++    std::vector<iteminfo> info_zh;
++    test_rock.basic_info( info_zh, &iteminfo_query::all, 1, false );
++    bool found_desc_zh = false;
++    for( const iteminfo &ii : info_zh ) {
++        if( ii.sName.find( "文明倒退后" ) != std::string::npos ||
++            ii.sFmt.find( "文明倒退后" ) != std::string::npos ) {
++            found_desc_zh = true;
++            break;
++        }
++    }
++    CHECK( found_desc_zh );
++
++    // D3. Switch back to English to verify dynamic responsiveness
++    TranslationManager::GetInstance().SetLanguage( "en" );
++    std::vector<iteminfo> info_en_again;
++    test_rock.basic_info( info_en_again, &iteminfo_query::all, 1, false );
++    bool found_desc_en_again = false;
++    bool found_desc_zh_again = false;
++    for( const iteminfo &ii : info_en_again ) {
++        if( ii.sName.find( "Civilization collapsed" ) != std::string::npos ||
++            ii.sFmt.find( "Civilization collapsed" ) != std::string::npos ) {
++            found_desc_en_again = true;
++        }
++        if( ii.sName.find( "文明倒退后" ) != std::string::npos ||
++            ii.sFmt.find( "文明倒退后" ) != std::string::npos ) {
++            found_desc_zh_again = true;
++        }
++    }
++    CHECK( found_desc_en_again );
++    CHECK_FALSE( found_desc_zh_again );
++#else
++    item test_rock( itype_id( "rock" ) );
++    std::vector<iteminfo> info;
++    test_rock.basic_info( info, &iteminfo_query::all, 1, false );
++    bool found_desc_en = false;
++    for( const iteminfo &ii : info ) {
++        if( ii.sName.find( "Civilization collapsed" ) != std::string::npos ||
++            ii.sFmt.find( "Civilization collapsed" ) != std::string::npos ) {
++            found_desc_en = true;
++            break;
++        }
++    }
++    CHECK( found_desc_en );
++#endif
++
++    // E. Test missing native art uses mod ascii art fallback
++    CHECK_FALSE( test_rock.type->picture_id.is_valid() ); // rock has no native art
++    std::optional<std::string> art_fallback =
++        cata::lua_platform::dispatch_item_ascii_art_fallback( "rock", std::nullopt, "en" );
++    REQUIRE( art_fallback.has_value() );
++    CHECK( *art_fallback == "cph_art_test_rock" );
++
++    std::vector<iteminfo> art_info;
++    test_rock.ascii_art_info( art_info, &iteminfo_query::all, 1, false );
++    bool found_fallback_art = false;
++    for( const iteminfo &ii : art_info ) {
++        if( ii.sName.find( "|rock|" ) != std::string::npos ||
++            ii.sFmt.find( "|rock|" ) != std::string::npos ) {
++            found_fallback_art = true;
++            break;
++        }
++    }
++    CHECK( found_fallback_art );
++
++    // F. Test native art priority over fallback
++    // If an item has native art, basic_info / ascii_art_info renders native art directly
++    item test_ammo( itype_id( "rock" ) );
++    // Assign native picture_id to simulate an item with native art
++    const_cast<itype *>( test_ammo.type )->picture_id = ascii_art_id( "test_native_art_ammo" );
++    REQUIRE( test_ammo.type->picture_id.is_valid() );
++
++    std::vector<iteminfo> native_art_info;
++    test_ammo.ascii_art_info( native_art_info, &iteminfo_query::all, 1, false );
++    bool found_native_art = false;
++    bool found_fallback_on_native = false;
++    for( const iteminfo &ii : native_art_info ) {
++        if( ii.sName.find( "|ammo|" ) != std::string::npos ||
++            ii.sFmt.find( "|ammo|" ) != std::string::npos ) {
++            found_native_art = true;
++        }
++        if( ii.sName.find( "|rock|" ) != std::string::npos ||
++            ii.sFmt.find( "|rock|" ) != std::string::npos ) {
++            found_fallback_on_native = true;
++        }
++    }
++    CHECK( found_native_art );
++    CHECK_FALSE( found_fallback_on_native );
++
++    // Reset rock picture_id
++    const_cast<itype *>( test_ammo.type )->picture_id = ascii_art_id();
++
++    // G. Test MOD enable and disable
++    cata::lua_platform::clear_active_runtimes();
++    cata::lua_platform::shutdown();
++    std::optional<std::string> disabled_desc =
++        cata::lua_platform::dispatch_item_description_append( "rock", std::nullopt, "en" );
++    CHECK_FALSE( disabled_desc.has_value() );
++    std::optional<std::string> disabled_art =
++        cata::lua_platform::dispatch_item_ascii_art_fallback( "rock", std::nullopt, "en" );
++    CHECK_FALSE( disabled_art.has_value() );
++}
++#endif

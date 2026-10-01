@@ -1,0 +1,324 @@
+{
+  "schema_version": 1,
+  "source_repository": "https://github.com/oncehere/Cataclysm-Phantom-Hope",
+  "baselines": {
+    "a43": {
+      "commit": "a43a8f2f270994dad716ab067c48aad7c2eeaee3",
+      "tree": "27c3147e211c22cf47489770b277f0d7a52b7ee8"
+    },
+    "earlier_candidate": {
+      "commit": "32a2a03425aed2de13d1aa38c698f843d29f3ba2",
+      "tree": "0b466a5f93487e6bce5d29a774aaa65c48ce4511"
+    },
+    "installed_reference": {
+      "commit": "06db38942be4ba0647005c40e59c96c7dc8e67b8",
+      "tree": "8431181e0f866ea03332266827b46b774801d018"
+    }
+  },
+  "candidate": {
+    "head": "32a2a03425aed2de13d1aa38c698f843d29f3ba2",
+    "head_tree": "0b466a5f93487e6bce5d29a774aaa65c48ce4511",
+    "dirty_paths": [
+      "src/lua_platform_disabled.cpp",
+      "src/lua_platform_runtime_hooks.cpp",
+      "tests/lua_platform_test_01_contract.cpp"
+    ],
+    "state": "HEAD_PLUS_THREE_UNCOMMITTED_TRACKED_FILES",
+    "scope": "seven_path_engine_hook_source_overlay",
+    "snapshot_hash": "5ebc5297f269feb6e1e6b1bf5c5236c684af0e8ec7da7989a4a2edd818343a45"
+  },
+  "patches": [
+    {
+      "path": "cph-item-footnotes-hooks-a43a8f2-to-candidate.patch",
+      "bytes": 44294,
+      "sha256": "d2fd881a3be0508aa22e4c133fc608afa43be21eff86d3ac355a9a1b3f0bde11",
+      "base_commit": "a43a8f2f270994dad716ab067c48aad7c2eeaee3",
+      "target_paths": [
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "src/item_info.cpp",
+        "src/lua_platform_disabled.cpp",
+        "src/lua_platform_hooks.cpp",
+        "src/lua_platform_hooks.h",
+        "src/lua_platform_runtime_hooks.cpp",
+        "tests/lua_platform_test_01_contract.cpp"
+      ],
+      "format": "git_full_index_text_patch"
+    },
+    {
+      "path": "cph-item-footnotes-fixes-32a2a03-to-candidate.patch",
+      "bytes": 34967,
+      "sha256": "c74304d9767b116e283ac296ff4e66921385628aca20f9c2907c439fbf0108f9",
+      "base_commit": "32a2a03425aed2de13d1aa38c698f843d29f3ba2",
+      "target_paths": [
+        "src/lua_platform_disabled.cpp",
+        "src/lua_platform_runtime_hooks.cpp",
+        "tests/lua_platform_test_01_contract.cpp"
+      ],
+      "format": "git_forward_only_binary_literal_patch",
+      "reverse_supported": false,
+      "privacy_reason": "No deleted historical personal path or reverse source data is distributed."
+    }
+  ],
+  "files": [
+    {
+      "path": "data/lua/types/ccb_platform_v1.d.lua",
+      "candidate_bytes": 504094,
+      "candidate_sha256": "8e0560d5e3a003012e4c4b38e95c02a03da3741158c6dfcefccd2b7fa922007d",
+      "candidate_git_blob_sha1": "459f4cfd953d8dbc30ed68c38aa008ed29f8751c",
+      "a43_sha256": "7e39e52a63b60cc6f1aa9fe83ec299c305d702a1e8cfb59c29c51ad8b934d26d",
+      "a43_git_blob_sha1": "6f4f06fa215bc713555c5b55d3473aefc0c56e3a",
+      "head_32a2_sha256": "8e0560d5e3a003012e4c4b38e95c02a03da3741158c6dfcefccd2b7fa922007d",
+      "head_32a2_git_blob_sha1": "459f4cfd953d8dbc30ed68c38aa008ed29f8751c",
+      "installed_reference_06db_sha256": "6b54e463516311d1a75092f4f44cdcd7a20b520c0c78a69a12fe3a1e22d3f07a",
+      "installed_reference_06db_git_blob_sha1": "120df4b044e3df9876b50a6c944b39c66c4b0018",
+      "installed_reference_matches_a43": false
+    },
+    {
+      "path": "src/item_info.cpp",
+      "candidate_bytes": 224729,
+      "candidate_sha256": "5a8ccf0d1e352c7a981595dbd57ca8a5b66b1a443905e4837cc012c796d0c2b4",
+      "candidate_git_blob_sha1": "1c1dd88c87dafa56a3944b553b0303b82402d017",
+      "a43_sha256": "95f3682e8943401062f5ef6defd8ca4f7f35cae83280de4d4bd45aa3e947b494",
+      "a43_git_blob_sha1": "e9c64d0d11242364cc1ac6bb0786ea197093f03b",
+      "head_32a2_sha256": "5a8ccf0d1e352c7a981595dbd57ca8a5b66b1a443905e4837cc012c796d0c2b4",
+      "head_32a2_git_blob_sha1": "1c1dd88c87dafa56a3944b553b0303b82402d017",
+      "installed_reference_06db_sha256": "95f3682e8943401062f5ef6defd8ca4f7f35cae83280de4d4bd45aa3e947b494",
+      "installed_reference_06db_git_blob_sha1": "e9c64d0d11242364cc1ac6bb0786ea197093f03b",
+      "installed_reference_matches_a43": true
+    },
+    {
+      "path": "src/lua_platform_disabled.cpp",
+      "candidate_bytes": 7770,
+      "candidate_sha256": "d540a348714fb3cb47da92fa0cb7e6ed14af52c00a283ed514d255401d02ac8d",
+      "candidate_git_blob_sha1": "280688aaeb80ec3fa12722e1a9d7c4e523481e31",
+      "a43_sha256": "26bcb1269795712f9d518558a3d2b229fc3862341853af5a34cef52106b2593d",
+      "a43_git_blob_sha1": "0602a0991db14bd7bef6fc83efd3d9db277b802b",
+      "head_32a2_sha256": "26bcb1269795712f9d518558a3d2b229fc3862341853af5a34cef52106b2593d",
+      "head_32a2_git_blob_sha1": "0602a0991db14bd7bef6fc83efd3d9db277b802b",
+      "installed_reference_06db_sha256": "26bcb1269795712f9d518558a3d2b229fc3862341853af5a34cef52106b2593d",
+      "installed_reference_06db_git_blob_sha1": "0602a0991db14bd7bef6fc83efd3d9db277b802b",
+      "installed_reference_matches_a43": true
+    },
+    {
+      "path": "src/lua_platform_hooks.cpp",
+      "candidate_bytes": 24899,
+      "candidate_sha256": "130f28ef08ddbb31c55d9573222246845e6b20535b9a60b67579de2b8e7fd558",
+      "candidate_git_blob_sha1": "89197a67876f9a6361273f3a6aa45ea63380c142",
+      "a43_sha256": "f4a6fb42cd862ab0a2cd28fee50b2f91d6bd98b0909c690bfa4c73f098ff33e3",
+      "a43_git_blob_sha1": "90f645d4982148dd3925fab8c7bc72aa1d74262c",
+      "head_32a2_sha256": "130f28ef08ddbb31c55d9573222246845e6b20535b9a60b67579de2b8e7fd558",
+      "head_32a2_git_blob_sha1": "89197a67876f9a6361273f3a6aa45ea63380c142",
+      "installed_reference_06db_sha256": "f4a6fb42cd862ab0a2cd28fee50b2f91d6bd98b0909c690bfa4c73f098ff33e3",
+      "installed_reference_06db_git_blob_sha1": "90f645d4982148dd3925fab8c7bc72aa1d74262c",
+      "installed_reference_matches_a43": true
+    },
+    {
+      "path": "src/lua_platform_hooks.h",
+      "candidate_bytes": 10610,
+      "candidate_sha256": "7b9976694aa1b8cd774b34779cdf4e8bf80c0d6f9917e0936ee74b3154b56700",
+      "candidate_git_blob_sha1": "a7a2398fd0801f77735ddad6f0eabc571c9838cc",
+      "a43_sha256": "76661401eb20bafd2f40652aa07d4b3ca652f4d7d51034bb06e1bee717d0054f",
+      "a43_git_blob_sha1": "5e20aacceed4751c0b754a4f213bde92e77b2403",
+      "head_32a2_sha256": "7b9976694aa1b8cd774b34779cdf4e8bf80c0d6f9917e0936ee74b3154b56700",
+      "head_32a2_git_blob_sha1": "a7a2398fd0801f77735ddad6f0eabc571c9838cc",
+      "installed_reference_06db_sha256": "76661401eb20bafd2f40652aa07d4b3ca652f4d7d51034bb06e1bee717d0054f",
+      "installed_reference_06db_git_blob_sha1": "5e20aacceed4751c0b754a4f213bde92e77b2403",
+      "installed_reference_matches_a43": true
+    },
+    {
+      "path": "src/lua_platform_runtime_hooks.cpp",
+      "candidate_bytes": 169779,
+      "candidate_sha256": "4310dd7a6383ef214c2a0d18791ab9ab2e15e8a294e93e45a90491e237f2b364",
+      "candidate_git_blob_sha1": "023c1057caf23073f8fc603661da09c9cc211094",
+      "a43_sha256": "ac02597ebd53a3f48e47ff17c7d8469910884e3f3daf1c2e4fe1b5efbf8a11d3",
+      "a43_git_blob_sha1": "1796cc81428619f46fc8441144d540723aa2a805",
+      "head_32a2_sha256": "c7377d3bacbc52a9ffa1b48fbef6a9728b2762ce481632a067beabb79d860a85",
+      "head_32a2_git_blob_sha1": "fcbfcc2728ba7026050ebcce684fc63fde777d46",
+      "installed_reference_06db_sha256": "ac02597ebd53a3f48e47ff17c7d8469910884e3f3daf1c2e4fe1b5efbf8a11d3",
+      "installed_reference_06db_git_blob_sha1": "1796cc81428619f46fc8441144d540723aa2a805",
+      "installed_reference_matches_a43": true
+    },
+    {
+      "path": "tests/lua_platform_test_01_contract.cpp",
+      "candidate_bytes": 26618,
+      "candidate_sha256": "b73edd39f1d27bc5f65bd3b079d35582fc68aee86e5d06c386883a85ec59178d",
+      "candidate_git_blob_sha1": "c3a2bde561582a527a6b0648ab6af660b2de8ed4",
+      "a43_sha256": "2a8a49d020c67f30fb2456e8f31713b16e94687c74b6786b210ad01d651f3399",
+      "a43_git_blob_sha1": "882fa95b156a8246dad42f622ca71f7a2fdc41a2",
+      "head_32a2_sha256": "e298bfe6aec0c36bf1ece6ca62ba63b54b4ba52753b807ba8e2240e0ef10d0fe",
+      "head_32a2_git_blob_sha1": "01d3706cab43222bd1426d525b0c9f7a804b1dca",
+      "installed_reference_06db_sha256": "2a8a49d020c67f30fb2456e8f31713b16e94687c74b6786b210ad01d651f3399",
+      "installed_reference_06db_git_blob_sha1": "882fa95b156a8246dad42f622ca71f7a2fdc41a2",
+      "installed_reference_matches_a43": true
+    }
+  ],
+  "application_checks": [
+    {
+      "check": "full_on_a43",
+      "source_commit": "a43a8f2f270994dad716ab067c48aad7c2eeaee3",
+      "patch": "cph-item-footnotes-hooks-a43a8f2-to-candidate.patch",
+      "commands": [
+        {
+          "command": [
+            "git",
+            "apply",
+            "--check",
+            "ENGINE_PATCHES/cph-item-footnotes-hooks-a43a8f2-to-candidate.patch"
+          ],
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "command": [
+            "git",
+            "apply",
+            "ENGINE_PATCHES/cph-item-footnotes-hooks-a43a8f2-to-candidate.patch"
+          ],
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": ""
+        }
+      ],
+      "status": "PASS",
+      "applied_file_sha256": {
+        "data/lua/types/ccb_platform_v1.d.lua": "8e0560d5e3a003012e4c4b38e95c02a03da3741158c6dfcefccd2b7fa922007d",
+        "src/item_info.cpp": "5a8ccf0d1e352c7a981595dbd57ca8a5b66b1a443905e4837cc012c796d0c2b4",
+        "src/lua_platform_disabled.cpp": "d540a348714fb3cb47da92fa0cb7e6ed14af52c00a283ed514d255401d02ac8d",
+        "src/lua_platform_hooks.cpp": "130f28ef08ddbb31c55d9573222246845e6b20535b9a60b67579de2b8e7fd558",
+        "src/lua_platform_hooks.h": "7b9976694aa1b8cd774b34779cdf4e8bf80c0d6f9917e0936ee74b3154b56700",
+        "src/lua_platform_runtime_hooks.cpp": "4310dd7a6383ef214c2a0d18791ab9ab2e15e8a294e93e45a90491e237f2b364",
+        "tests/lua_platform_test_01_contract.cpp": "b73edd39f1d27bc5f65bd3b079d35582fc68aee86e5d06c386883a85ec59178d"
+      },
+      "candidate_exact_match_paths": [
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "src/item_info.cpp",
+        "src/lua_platform_disabled.cpp",
+        "src/lua_platform_hooks.cpp",
+        "src/lua_platform_hooks.h",
+        "src/lua_platform_runtime_hooks.cpp",
+        "tests/lua_platform_test_01_contract.cpp"
+      ],
+      "preexisting_independent_changes_preserved": [],
+      "scope": "source_patch_application_and_hash_equality_not_build_or_runtime"
+    },
+    {
+      "check": "fixes_on_32a2",
+      "source_commit": "32a2a03425aed2de13d1aa38c698f843d29f3ba2",
+      "patch": "cph-item-footnotes-fixes-32a2a03-to-candidate.patch",
+      "commands": [
+        {
+          "command": [
+            "git",
+            "apply",
+            "--check",
+            "ENGINE_PATCHES/cph-item-footnotes-fixes-32a2a03-to-candidate.patch"
+          ],
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "command": [
+            "git",
+            "apply",
+            "ENGINE_PATCHES/cph-item-footnotes-fixes-32a2a03-to-candidate.patch"
+          ],
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": ""
+        }
+      ],
+      "status": "PASS",
+      "applied_file_sha256": {
+        "src/lua_platform_disabled.cpp": "d540a348714fb3cb47da92fa0cb7e6ed14af52c00a283ed514d255401d02ac8d",
+        "src/lua_platform_runtime_hooks.cpp": "4310dd7a6383ef214c2a0d18791ab9ab2e15e8a294e93e45a90491e237f2b364",
+        "tests/lua_platform_test_01_contract.cpp": "b73edd39f1d27bc5f65bd3b079d35582fc68aee86e5d06c386883a85ec59178d"
+      },
+      "candidate_exact_match_paths": [
+        "src/lua_platform_disabled.cpp",
+        "src/lua_platform_runtime_hooks.cpp",
+        "tests/lua_platform_test_01_contract.cpp"
+      ],
+      "preexisting_independent_changes_preserved": [],
+      "scope": "source_patch_application_and_hash_equality_not_build_or_runtime"
+    },
+    {
+      "check": "full_on_06db",
+      "source_commit": "06db38942be4ba0647005c40e59c96c7dc8e67b8",
+      "patch": "cph-item-footnotes-hooks-a43a8f2-to-candidate.patch",
+      "commands": [
+        {
+          "command": [
+            "git",
+            "apply",
+            "--check",
+            "ENGINE_PATCHES/cph-item-footnotes-hooks-a43a8f2-to-candidate.patch"
+          ],
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "command": [
+            "git",
+            "apply",
+            "ENGINE_PATCHES/cph-item-footnotes-hooks-a43a8f2-to-candidate.patch"
+          ],
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": ""
+        }
+      ],
+      "status": "PASS",
+      "applied_file_sha256": {
+        "data/lua/types/ccb_platform_v1.d.lua": "ef0459d34a85fc0d5c502c4fa3a84cb5fd896410efd216f563144a1a341546c9",
+        "src/item_info.cpp": "5a8ccf0d1e352c7a981595dbd57ca8a5b66b1a443905e4837cc012c796d0c2b4",
+        "src/lua_platform_disabled.cpp": "d540a348714fb3cb47da92fa0cb7e6ed14af52c00a283ed514d255401d02ac8d",
+        "src/lua_platform_hooks.cpp": "130f28ef08ddbb31c55d9573222246845e6b20535b9a60b67579de2b8e7fd558",
+        "src/lua_platform_hooks.h": "7b9976694aa1b8cd774b34779cdf4e8bf80c0d6f9917e0936ee74b3154b56700",
+        "src/lua_platform_runtime_hooks.cpp": "4310dd7a6383ef214c2a0d18791ab9ab2e15e8a294e93e45a90491e237f2b364",
+        "tests/lua_platform_test_01_contract.cpp": "b73edd39f1d27bc5f65bd3b079d35582fc68aee86e5d06c386883a85ec59178d"
+      },
+      "candidate_exact_match_paths": [
+        "src/item_info.cpp",
+        "src/lua_platform_disabled.cpp",
+        "src/lua_platform_hooks.cpp",
+        "src/lua_platform_hooks.h",
+        "src/lua_platform_runtime_hooks.cpp",
+        "tests/lua_platform_test_01_contract.cpp"
+      ],
+      "preexisting_independent_changes_preserved": [
+        "data/lua/types/ccb_platform_v1.d.lua"
+      ],
+      "scope": "source_patch_application_and_hash_equality_not_build_or_runtime"
+    }
+  ],
+  "required_hooks": [
+    "on_item_description_append",
+    "on_item_ascii_art_fallback"
+  ],
+  "installed_reference_hook_support": "MISSING_BOTH_ITEM_DISPLAY_HOOKS",
+  "json_only_equivalent": "NOT_AVAILABLE_WITH_ORIGINAL_DESCRIPTION_AND_AUTOMATIC_LANGUAGE_REQUIREMENTS",
+  "upstream_license": {
+    "path": "LICENSE.txt",
+    "source_path": "LICENSE.txt",
+    "source_commit": "a43a8f2f270994dad716ab067c48aad7c2eeaee3",
+    "declared_primary_license": "Creative Commons Attribution-ShareAlike 3.0 Unported",
+    "scope": "Original engine primary license paragraph retained; owner selected the same CC-BY-SA-3.0 license for the MOD contributions and patches. Undistributed third-party font/library notices are not copied.",
+    "source_file_sha256": "48bd3d15e40bc00f2eb182105a64fc3b376a1a376172642fca5d6c82140d26d7",
+    "distributed_license_sha256": "3d8e2d647cc0bb8297ea25888b9327f72a3d5cf1b336e949b8d7759e441c0407"
+  },
+  "public_engine_binary": "NOT_INCLUDED",
+  "engine_source_edited": false,
+  "git_commit_or_push_performed": false,
+  "compilation_by_this_packaging_task": "NOT_RUN",
+  "gui_acceptance": "NOT_RUN",
+  "four_platform_release": "NOT_RUN",
+  "distribution_license": "CC-BY-SA-3.0",
+  "attribution": [
+    "oncehere",
+    "CPH/Cataclysm contributors"
+  ],
+  "notice_path": "NOTICE.md"
+}

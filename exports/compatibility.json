@@ -1,0 +1,12 @@
+{
+  "auxiliary_export_contains_ascii_art": false,
+  "auxiliary_export_contains_variants": false,
+  "auxiliary_export_is_mod": false,
+  "game_package": "mod/cph_item_footnotes",
+  "policy": "integration_only_user_accepted_content",
+  "required_hooks": [
+    "on_item_description_append",
+    "on_item_ascii_art_fallback"
+  ],
+  "schema_version": 1
+}

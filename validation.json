@@ -1,0 +1,92 @@
+{
+  "content": {
+    "R_text": 4,
+    "S_text": 10332,
+    "V_text": 2,
+    "art_items": 1,
+    "art_variants": 0,
+    "excluded_records": 0,
+    "total_art": 1,
+    "total_text": 10338
+  },
+  "editorial": {
+    "approved": 12,
+    "pending_or_unreviewed": 10327
+  },
+  "engine": {
+    "configuration": {
+      "localize": "ON",
+      "lua": "ON",
+      "platform": "Linux",
+      "sdl": "SDL3"
+    },
+    "game_binary_sha256": "bdf1c63fba5ff92dc6fcf5b8ab0d404a3a90a297714f1069565734112dac0cc5",
+    "head": "32a2a03425aed2de13d1aa38c698f843d29f3ba2",
+    "hook_source_sha256": {
+      "data/lua/types/ccb_platform_v1.d.lua": "8e0560d5e3a003012e4c4b38e95c02a03da3741158c6dfcefccd2b7fa922007d",
+      "src/item_info.cpp": "5a8ccf0d1e352c7a981595dbd57ca8a5b66b1a443905e4837cc012c796d0c2b4",
+      "src/lua_platform_disabled.cpp": "d540a348714fb3cb47da92fa0cb7e6ed14af52c00a283ed514d255401d02ac8d",
+      "src/lua_platform_hooks.cpp": "130f28ef08ddbb31c55d9573222246845e6b20535b9a60b67579de2b8e7fd558",
+      "src/lua_platform_hooks.h": "7b9976694aa1b8cd774b34779cdf4e8bf80c0d6f9917e0936ee74b3154b56700",
+      "src/lua_platform_runtime_hooks.cpp": "4310dd7a6383ef214c2a0d18791ab9ab2e15e8a294e93e45a90491e237f2b364",
+      "tests/lua_platform_test_01_contract.cpp": "b73edd39f1d27bc5f65bd3b079d35582fc68aee86e5d06c386883a85ec59178d"
+    },
+    "requires_three_tracked_file_fixes": true,
+    "tree": "0b466a5f93487e6bce5d29a774aaa65c48ce4511"
+  },
+  "full_universe_ready": false,
+  "manifest_sha256": "f3f7bb44a0714e1871a91e85848a8c5e4957174e3647121dc20a4c3c04bec7ff",
+  "mod_zip_sha256": "3b14988c2c4311576ab704f7af1bb79e557f919500c07d079716fd0a83f25bca",
+  "not_run": [
+    "GUI rendering",
+    "real old-save gameplay",
+    "Windows",
+    "macOS",
+    "Lua-disabled build",
+    "localization-disabled build",
+    "full gameplay simulation"
+  ],
+  "runtime": {
+    "actual_game_check_mods_exit_code": 0,
+    "checks": [
+      "Actual package Lua lifecycle and JSON ASCII registration",
+      "Public item::get_info English -> Chinese -> English; direct hooks fr/ja/de use English and zh-TW uses Chinese",
+      "Original descriptions precede footnotes; actual ASCII fallback and native picture priority",
+      "Disabled runtime emits neither footnotes nor fallback art",
+      "MOD startup/shutdown and direct hooks preserve RNG",
+      "相同起点启停显示调用的RNG终态与原生基线一致",
+      "Displayed item serialization remains unchanged",
+      "Actual candidate game --check-mods"
+    ],
+    "display_sample_objects": 12,
+    "fresh_process_display_calls": 36,
+    "main_assertions": 600,
+    "native_null_boundaries": {
+      "default_null_description_rows": 1,
+      "default_null_is_null": true,
+      "empty_proxy_is_null": false,
+      "empty_proxy_measured": true,
+      "empty_proxy_type_id": "",
+      "native_null_description_rows": 1,
+      "native_null_display": "NOT_APPLICABLE_NATIVE_NULL",
+      "native_null_is_null": true,
+      "native_null_type_id": "null"
+    },
+    "rng_and_serialization": "IDENTICAL",
+    "rng_off_assertions": 96,
+    "rng_on_assertions": 95
+  },
+  "schema_version": 1,
+  "scope": "integration_release",
+  "source_receipt_sha256": "b75784e3e33ce56223cfb25050cd5124eadf4adfe497ceda23eb7e7288238683",
+  "status": "PASS",
+  "tools_tests": {
+    "errors": 0,
+    "failures": 0,
+    "passed": 357,
+    "skipped": 1,
+    "total": 358
+  },
+  "validated_at": "2026-10-01T15:58:54.296740+00:00",
+  "version": "0.1.0"
+}
