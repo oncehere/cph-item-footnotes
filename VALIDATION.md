@@ -11,3 +11,7 @@
 - 完整与增量引擎补丁均实际应用到各自基线，并逐文件核对目标哈希。
 
 GUI、真实旧存档、Windows/macOS、Lua 关闭、本地化关闭和完整游戏模拟未运行。已验证的是这些确切引擎和包字节上的本机整合行为。完整内容目标与文案审稿完成度分别记录，本次不宣称全部运行时/变体覆盖或全量可靠事实审查。
+
+安装位置更正（2026-10-02）：第三方 MOD 应放入游戏提示的用户 MOD 目录 `user_moddir`，不能放入内置 `data/mods/`。此前的 `--check-mods` 结果仅证明该命令下的加载检查通过，未验证进入世界时的第三方目录检查；安装步骤以当前 [README](README.md#安装) 为准。冻结 v0.1.0 包与哈希不变。
+
+Installation correction (2026-10-02): Use the user MOD directory reported by the game (`user_moddir`). The previous `--check-mods` result does not establish that entering a world passes the third-party directory check. See the current [README](README.md#english) for corrected installation guidance; frozen v0.1.0 package bytes and hashes are unchanged.

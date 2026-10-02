@@ -7,8 +7,10 @@
 ## 安装
 
 1. 使用已提供 `on_item_description_append` 和 `on_item_ascii_art_fallback` 的 CPH 引擎，并启用 Lua Platform。
-2. 下载 `cph_item_footnotes-v0.1.0.zip`，解压后将整个 `cph_item_footnotes` 文件夹放入游戏 `data/mods/`。
-3. 创建世界时保留核心模组 `ccb`，加入“末日脚注 / Apocalypse Footnotes”。
+2. 下载 `cph_item_footnotes-v0.1.0.zip`，解压后将整个 `cph_item_footnotes` 文件夹放入游戏提示的用户 MOD 目录 `user_moddir`。本机 Linux 安装对应 `~/.local/share/cataclysm-phantom-hope/mods/cph_item_footnotes/`；其他安装以游戏提示的目录为准。
+3. 重启游戏，创建世界时保留核心模组 `ccb`，加入“末日脚注 / Apocalypse Footnotes”。
+
+**安装位置更正（2026-10-02）：** 第三方 MOD 必须使用用户 MOD 目录，不能放入内置 `data/mods/`。v0.1.0 下载资产保持原始字节；ZIP 内 `cph_item_footnotes/README.md` 和对应源码目录中的旧位置指引以本说明为准。若此前已装入内置目录，请将其移至用户 MOD 目录后重新启动游戏；目录由 Nix 管理时，需要同时更正声明式安装配置。
 
 安装包只包含 MOD。缺少这两个接口的 CPH 版本需要先使用 Release 附带的引擎补丁；完整补丁以 CPH `a43a8f2f270994dad716ab067c48aad7c2eeaee3` 为基线，增量补丁以 `32a2a03425aed2de13d1aa38c698f843d29f3ba2` 为基线。应用、版本边界和编译说明见 [引擎兼容说明](engine-patches/README.md)。
 
@@ -44,7 +46,9 @@ python3 scripts/verify_release.py
 
 Apocalypse Footnotes appends bilingual dark humor to existing CPH item descriptions. Chinese locales use Chinese; every other locale uses English. Native descriptions and artwork remain intact.
 
-Download the MOD ZIP from Releases, extract the complete `cph_item_footnotes` directory into `data/mods/`, and enable it alongside core mod `ccb` when creating a world. The engine must provide Lua Platform and both item hooks listed above. If your engine lacks them, see the supplied engine patches and their exact revision requirements.
+Download the MOD ZIP from Releases and extract the complete `cph_item_footnotes` directory into the user MOD directory shown by the game (`user_moddir`). For this Linux installation, the resulting path is `~/.local/share/cataclysm-phantom-hope/mods/cph_item_footnotes/`; other installations should use the directory reported by the game. Restart the game and enable it alongside core mod `ccb` when creating a world. The engine must provide Lua Platform and both item hooks listed above. If your engine lacks them, see the supplied engine patches and their exact revision requirements.
+
+**Installation correction (2026-10-02):** Third-party MODs belong in the user MOD directory, not the built-in `data/mods/` directory. The v0.1.0 assets retain their original bytes; this correction supersedes the old directory guidance in the ZIP's `cph_item_footnotes/README.md` and its source copy. Move an existing built-in installation to the user MOD directory and restart the game. Nix-managed installations also require a change to the declarative installation configuration.
 
 Version 0.1.0 contains 10,338 bilingual text entries and one ASCII picture. This is an integration release with partial runtime/variant coverage; it does not certify all editorial content or trivia. Python 3 can verify the frozen package using the command above.
 
