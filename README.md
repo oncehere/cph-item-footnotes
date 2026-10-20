@@ -34,13 +34,15 @@
 
 `mod/cph_item_footnotes/` 是可安装 MOD 源码，`engine-patches/` 是对应本体接口修改。`exports/` 的 JSON 仅供工具读取，不能放入游戏 MOD 目录。
 
-使用 Python 3 校验公开文件和安装包：
+使用 Python 3 校验已发行的冻结文件和安装包（包括 ZIP 内的历史 MOD 源码）：
 
 ```sh
-python3 scripts/verify_release.py
+python3 scripts/verify_release.py --frozen-release
 ```
 
 `manifest.json` 是冻结构建清单，记录来源、收录键和逐文件 SHA-256；运行验收与发布状态单独记录。
+
+`mod/cph_item_footnotes/` 可包含尚未发布的源码改动。当前未发布改动为在每条脚注前增加一个空行，v0.1.0 ZIP 和冻结清单保持原始字节。准备发布时使用无参数的 `python3 scripts/verify_release.py`，严格要求当前 MOD 源码、冻结清单和 ZIP 逐字节一致；开发源码领先发行包时，此检查会报告差异。冻结包校验通过不代表当前开发源码已通过运行验收。
 
 ## English
 
@@ -50,7 +52,9 @@ Download the MOD ZIP from Releases and extract the complete `cph_item_footnotes`
 
 **Installation correction (2026-10-02):** Third-party MODs belong in the user MOD directory, not the built-in `data/mods/` directory. The v0.1.0 assets retain their original bytes; this correction supersedes the old directory guidance in the ZIP's `cph_item_footnotes/README.md` and its source copy. Move an existing built-in installation to the user MOD directory and restart the game. Nix-managed installations also require a change to the declarative installation configuration.
 
-Version 0.1.0 contains 10,338 bilingual text entries and one ASCII picture. This is an integration release with partial runtime/variant coverage; it does not certify all editorial content or trivia. Python 3 can verify the frozen package using the command above.
+Version 0.1.0 contains 10,338 bilingual text entries and one ASCII picture. This is an integration release with partial runtime/variant coverage; it does not certify all editorial content or trivia. Use `python3 scripts/verify_release.py --frozen-release` to verify the original package independently of development source changes. With no arguments, the verifier also requires the current MOD source to match the frozen manifest and ZIP exactly.
+
+The unreleased source adds a blank line before every footnote. The v0.1.0 ZIP and manifest retain their original bytes; frozen-package verification does not validate the current development source at runtime.
 
 ## 许可与署名
 
