@@ -45,7 +45,7 @@ local function on_description_append(payload)
     end
 
     if text and text ~= "" then
-        return { text = text }
+        return { text = "\n" .. text }
     end
     return nil
 end

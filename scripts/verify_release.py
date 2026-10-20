@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Verify public artifact bytes and paths; also enforce checks under python -O."""
+import argparse
 import hashlib
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 import stat
 import zipfile
@@ -41,44 +42,55 @@ def sha256(path):
     return digest.hexdigest()
 
 
-def checked_file(name, record, base=ROOT):
-    path = safe_path(name, base)
+def checked_record(name, record, size, digest):
     require(isinstance(record, dict) and type(record.get('bytes')) is int and record['bytes'] >= 0,
             'Invalid file size record: '+name)
     expected = record.get('sha256')
     require(isinstance(expected, str) and re.fullmatch('[0-9a-f]{64}', expected) is not None,
             'Invalid SHA256 record: '+name)
-    require(path.stat().st_size == record['bytes'] and sha256(path) == expected, 'Changed file: '+name)
+    require(size == record['bytes'] and digest == expected, 'Changed file: '+name)
+
+
+def checked_file(name, record, base=ROOT):
+    path = safe_path(name, base)
+    checked_record(name, record, path.stat().st_size, sha256(path))
     return path
 
 
-def verify():
+def verify(*, frozen_release=False):
     manifest = json.loads(safe_path('manifest.json').read_text(encoding='utf-8'))
     require(manifest.get('schema_version') == 1 and manifest.get('mod_id') == MOD_ID, 'Invalid release identity')
     version = manifest.get('version')
     require(isinstance(version, str) and re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', version) is not None,
             'Invalid release semantic version')
-    package = safe_path('mod/'+MOD_ID, directory=True)
-    actual = {}
-    for path in sorted(package.rglob('*')):
-        require(not path.is_symlink(), 'Symlink in MOD package')
-        require(path.resolve().is_relative_to(ROOT), 'MOD path escapes release root')
-        if path.is_file():
-            actual[path.relative_to(package).as_posix()] = sha256(path)
-    require(actual and actual == manifest.get('package_file_hashes'), 'MOD files differ from the frozen manifest')
+    expected_package = manifest.get('package_file_hashes')
+    require(isinstance(expected_package, dict) and expected_package, 'Missing MOD file hashes')
+    for name, digest in expected_package.items():
+        require(isinstance(name, str) and bool(name), 'Nonempty MOD path required')
+        relative = PurePosixPath(name)
+        require(bool(relative.parts) and not relative.is_absolute() and '..' not in relative.parts and relative.as_posix() == name
+                and '\\' not in name and ':' not in name, 'Unsafe MOD path: '+name)
+        require(isinstance(digest, str) and re.fullmatch('[0-9a-f]{64}', digest) is not None,
+                'Invalid MOD SHA256: '+name)
+    actual = expected_package
+    if not frozen_release:
+        package = safe_path('mod/'+MOD_ID, directory=True)
+        actual = {}
+        for path in sorted(package.rglob('*')):
+            require(not path.is_symlink(), 'Symlink in MOD package')
+            require(path.resolve().is_relative_to(ROOT), 'MOD path escapes release root')
+            if path.is_file():
+                actual[path.relative_to(package).as_posix()] = sha256(path)
+        require(actual == expected_package, 'MOD files differ from the frozen manifest')
     require(isinstance(manifest.get('files'), dict) and manifest['files'], 'Missing release file records')
+    source_prefix = 'mod/'+MOD_ID+'/'
+    source_records = {}
     for name, record in manifest['files'].items():
-        checked_file(name, record)
-    metadata = json.loads(safe_path('mod/'+MOD_ID+'/modinfo.json').read_text(encoding='utf-8'))
-    require(isinstance(metadata, list) and len(metadata) == 1 and metadata[0].get('type') == 'MOD_INFO', 'Invalid native MOD metadata')
-    require(metadata[0].get('id') == MOD_ID and metadata[0].get('dependencies') == ['ccb'], 'Invalid MOD dependencies')
-    artworks = json.loads(safe_path('mod/'+MOD_ID+'/data/ascii_art.json').read_text(encoding='utf-8'))
-    for artwork in artworks:
-        require(artwork.get('type') == 'ascii_art' and isinstance(artwork.get('picture'), list)
-                and 1 <= len(artwork['picture']) <= 12, 'Invalid native artwork')
-        for line in artwork['picture']:
-            require(isinstance(line, str) and len(line) <= 41 and all(32 <= ord(char) <= 126 for char in line),
-                    'Invalid printable ASCII artwork')
+        if name.startswith(source_prefix):
+            source_records[name[len(source_prefix):]] = record
+        if not frozen_release or not name.startswith(source_prefix):
+            checked_file(name, record)
+    require(set(source_records) == set(actual), 'MOD source records differ from the package inventory')
     archive_name = MOD_ID+'-v'+version+'.zip'
     require(archive_name in manifest['files'], 'Archive is not bound by release manifest')
     archive = safe_path(archive_name)
@@ -91,7 +103,27 @@ def verify():
             mode = stat.S_IFMT(member.external_attr >> 16)
             require(not member.is_dir() and mode in (0, stat.S_IFREG), 'ZIP member is not a regular file: '+member.filename)
             name = member.filename[len(MOD_ID)+1:]
-            require(hashlib.sha256(zipped.read(member)).hexdigest() == actual[name], 'ZIP bytes differ: '+name)
+            data = zipped.read(member)
+            digest = hashlib.sha256(data).hexdigest()
+            require(digest == actual[name], 'ZIP bytes differ: '+name)
+            if frozen_release:
+                checked_record(source_prefix+name, source_records[name], len(data), digest)
+        if frozen_release:
+            metadata_text = zipped.read(MOD_ID+'/modinfo.json').decode('utf-8')
+            artworks_text = zipped.read(MOD_ID+'/data/ascii_art.json').decode('utf-8')
+        else:
+            metadata_text = safe_path(source_prefix+'modinfo.json').read_text(encoding='utf-8')
+            artworks_text = safe_path(source_prefix+'data/ascii_art.json').read_text(encoding='utf-8')
+    metadata = json.loads(metadata_text)
+    require(isinstance(metadata, list) and len(metadata) == 1 and metadata[0].get('type') == 'MOD_INFO', 'Invalid native MOD metadata')
+    require(metadata[0].get('id') == MOD_ID and metadata[0].get('dependencies') == ['ccb'], 'Invalid MOD dependencies')
+    artworks = json.loads(artworks_text)
+    for artwork in artworks:
+        require(artwork.get('type') == 'ascii_art' and isinstance(artwork.get('picture'), list)
+                and 1 <= len(artwork['picture']) <= 12, 'Invalid native artwork')
+        for line in artwork['picture']:
+            require(isinstance(line, str) and len(line) <= 41 and all(32 <= ord(char) <= 126 for char in line),
+                    'Invalid printable ASCII artwork')
     patches = safe_path('engine-patches', directory=True)
     sums = safe_path('SHA256SUMS', patches)
     recorded = set()
@@ -114,9 +146,13 @@ def verify():
         path = checked_file(record['path'], record, patches)
         data = path.read_bytes()
         require(b'/home/' not in data and b'/tmp/' not in data, 'Private path in patch: '+path.name)
-    print(json.dumps({'status': 'PASS', 'version': version, 'counts': manifest['content']['counts'],
+    print(json.dumps({'status': 'PASS', 'mode': 'frozen_release' if frozen_release else 'source_and_release',
+                      'version': version, 'counts': manifest['content']['counts'],
                       'archive_sha256': sha256(archive)}, ensure_ascii=False, indent=2))
 
 
 if __name__ == '__main__':
-    verify()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--frozen-release', action='store_true',
+                        help='Verify the frozen ZIP and release records without comparing current MOD source.')
+    verify(frozen_release=parser.parse_args().frozen_release)
