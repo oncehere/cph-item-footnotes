@@ -6,13 +6,15 @@
 
 ## 安装
 
-1. 使用已提供 `on_item_description_append` 和 `on_item_ascii_art_fallback` 的 CPH 引擎，并启用 Lua Platform。
+1. 使用已提供 CPH 通用物品展示接口 `on_item_description_append` 和 `on_item_ascii_art_fallback` 的引擎，并启用 Lua Platform。包含这两项能力的 CPH 构建可直接使用本 MOD。
 2. 下载 `cph_item_footnotes-v0.1.0.zip`，解压后将整个 `cph_item_footnotes` 文件夹放入游戏提示的用户 MOD 目录 `user_moddir`。本机 Linux 安装对应 `~/.local/share/cataclysm-phantom-hope/mods/cph_item_footnotes/`；其他安装以游戏提示的目录为准。
 3. 重启游戏，创建世界时保留核心模组 `ccb`，加入“末日脚注 / Apocalypse Footnotes”。
 
-**安装位置更正（2026-10-02）：** 第三方 MOD 必须使用用户 MOD 目录，不能放入内置 `data/mods/`。v0.1.0 下载资产保持原始字节；ZIP 内 `cph_item_footnotes/README.md` 和对应源码目录中的旧位置指引以本说明为准。若此前已装入内置目录，请将其移至用户 MOD 目录后重新启动游戏；目录由 Nix 管理时，需要同时更正声明式安装配置。
+**安装位置更正（2026-10-02）：** 第三方 MOD 必须使用用户 MOD 目录，不能放入内置 `data/mods/`。v0.1.0 下载资产保持原始字节；ZIP 内 `cph_item_footnotes/README.md` 的旧位置指引以本说明为准，当前开发源码中的安装说明已更正。若此前已装入内置目录，请将其移至用户 MOD 目录后重新启动游戏；目录由 Nix 管理时，需要同时更正声明式安装配置。
 
-安装包只包含 MOD。缺少这两个接口的 CPH 版本需要先使用 Release 附带的引擎补丁；完整补丁以 CPH `a43a8f2f270994dad716ab067c48aad7c2eeaee3` 为基线，增量补丁以 `32a2a03425aed2de13d1aa38c698f843d29f3ba2` 为基线。应用、版本边界和编译说明见 [引擎兼容说明](engine-patches/README.md)。
+安装包只包含 MOD。CPH 本体维护通用的描述追加与缺图回退接口；本仓库维护脚注内容、语言选择、物品/变体规则和补图映射。使用已包含上述接口的 CPH 版本时，无需再应用脚注专用的本体补丁。核心模组 ID `ccb` 和 Lua Platform 的存在本身不能证明接口可用，也不代表任意 CCB 或 CDDA 构建具备这些 CPH 能力；须按所用引擎的实际接口和加载结果确认兼容性。
+
+Release 保留的引擎补丁是历史兼容资产：完整补丁以 CPH `a43a8f2f270994dad716ab067c48aad7c2eeaee3` 为基线，增量补丁以 `32a2a03425aed2de13d1aa38c698f843d29f3ba2` 为基线。它们不适用于任意新版，也不应重复应用到已提供接口的引擎。精确版本、应用和编译说明见 [历史引擎补丁说明](engine-patches/README.md)；当前开发 MOD 的能力要求见 [兼容说明](mod/cph_item_footnotes/COMPATIBILITY.md)。
 
 ## 当前收录
 
@@ -32,7 +34,7 @@
 
 真实引擎验收检查原生物品信息、中文/英文动态切换、专属变体与基础回退、原生字符画优先、MOD 开关以及 RNG/序列化一致性。最终结果和边界见 [验证记录](VALIDATION.md)。
 
-`mod/cph_item_footnotes/` 是可安装 MOD 源码，`engine-patches/` 是对应本体接口修改。`exports/` 的 JSON 仅供工具读取，不能放入游戏 MOD 目录。
+`mod/cph_item_footnotes/` 是可安装 MOD 源码，`engine-patches/` 保留确切历史基线的本体补丁。`exports/` 的 JSON 仅供工具读取，不能放入游戏 MOD 目录。
 
 使用 Python 3 校验已发行的冻结文件和安装包（包括 ZIP 内的历史 MOD 源码）：
 
@@ -42,7 +44,7 @@ python3 scripts/verify_release.py --frozen-release
 
 `manifest.json` 是冻结构建清单，记录来源、收录键和逐文件 SHA-256；运行验收与发布状态单独记录。
 
-`mod/cph_item_footnotes/` 可包含尚未发布的源码改动。当前未发布改动为在每条脚注前增加一个空行，v0.1.0 ZIP 和冻结清单保持原始字节。准备发布时使用无参数的 `python3 scripts/verify_release.py`，严格要求当前 MOD 源码、冻结清单和 ZIP 逐字节一致；开发源码领先发行包时，此检查会报告差异。冻结包校验通过不代表当前开发源码已通过运行验收。
+`mod/cph_item_footnotes/` 可包含尚未发布的源码改动。当前未发布改动包括在每条脚注前增加一个空行，以及更新安装与引擎兼容说明；v0.1.0 ZIP 和冻结清单保持原始字节。准备发布时使用无参数的 `python3 scripts/verify_release.py`，严格要求当前 MOD 源码、冻结清单和 ZIP 逐字节一致；开发源码领先发行包时，此检查会报告差异。冻结包校验通过不代表当前开发源码已通过运行验收。
 
 ## English
 
@@ -50,11 +52,13 @@ Apocalypse Footnotes appends bilingual dark humor to existing CPH item descripti
 
 Download the MOD ZIP from Releases and extract the complete `cph_item_footnotes` directory into the user MOD directory shown by the game (`user_moddir`). For this Linux installation, the resulting path is `~/.local/share/cataclysm-phantom-hope/mods/cph_item_footnotes/`; other installations should use the directory reported by the game. Restart the game and enable it alongside core mod `ccb` when creating a world. The engine must provide Lua Platform and both item hooks listed above. If your engine lacks them, see the supplied engine patches and their exact revision requirements.
 
-**Installation correction (2026-10-02):** Third-party MODs belong in the user MOD directory, not the built-in `data/mods/` directory. The v0.1.0 assets retain their original bytes; this correction supersedes the old directory guidance in the ZIP's `cph_item_footnotes/README.md` and its source copy. Move an existing built-in installation to the user MOD directory and restart the game. Nix-managed installations also require a change to the declarative installation configuration.
+CPH maintains the generic description-append and missing-art hooks. This MOD owns its text, language selection, item/variant rules and artwork mappings. A CPH build exposing both hooks needs no additional footnotes-specific engine patch. The core ID `ccb` and Lua Platform alone do not establish hook availability; compatibility with arbitrary CCB or CDDA builds is not implied. The supplied patches remain frozen artifacts for their exact historical baselines and should not be applied again to engines that already provide the interfaces.
+
+**Installation correction (2026-10-02):** Third-party MODs belong in the user MOD directory, not the built-in `data/mods/` directory. The v0.1.0 assets retain their original bytes; this correction supersedes the old directory guidance in the ZIP's `cph_item_footnotes/README.md`. The current development source documents the corrected location. Move an existing built-in installation to the user MOD directory and restart the game. Nix-managed installations also require a change to the declarative installation configuration.
 
 Version 0.1.0 contains 10,338 bilingual text entries and one ASCII picture. This is an integration release with partial runtime/variant coverage; it does not certify all editorial content or trivia. Use `python3 scripts/verify_release.py --frozen-release` to verify the original package independently of development source changes. With no arguments, the verifier also requires the current MOD source to match the frozen manifest and ZIP exactly.
 
-The unreleased source adds a blank line before every footnote. The v0.1.0 ZIP and manifest retain their original bytes; frozen-package verification does not validate the current development source at runtime.
+The unreleased source adds a blank line before every footnote and updates installation and engine-compatibility documentation. The v0.1.0 ZIP and manifest retain their original bytes; frozen-package verification does not validate the current development source at runtime.
 
 ## 许可与署名
 
